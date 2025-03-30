@@ -1,0 +1,16 @@
+{
+  "name": "search_books",
+  "description": "Search for books by content using the book search API.",
+  "parameters": {
+    "type": "object",
+    "properties": {
+      "query": {
+        "type": "string",
+        "description": "The search query to find matching book content"
+      }
+    },
+    "required": [
+      "query"
+    ]
+  }
+}

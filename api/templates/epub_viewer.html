@@ -1,0 +1,262 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>{{ file_path }}</title>
+    <link rel="stylesheet" href="/static/css/style.css">
+    <link rel="stylesheet" href="/static/css/epub_viewer.css">
+    <script src="https://cdn.jsdelivr.net/npm/epubjs@0.3.93/dist/epub.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/jszip@3.10.1/dist/jszip.min.js"></script>
+</head>
+<body>
+    <header>
+        <h1>EPUB: {{ file_path }}</h1>
+    </header>
+    
+    <nav class="nav">
+        <ul>
+            <li><a href="/">Home</a></li>
+            <li><a href="/files">File List</a></li>
+            <li><a href="/index_books">Re-Index Books</a></li>
+        </ul>
+    </nav>
+    
+    <div class="container">
+        <div id="viewer"></div>
+        <div class="controls">
+            <button id="prev">Previous</button>
+            <button id="next">Next</button>
+        </div>
+    </div>
+    
+    <script>
+        // Debug logging function
+        function debug(message, obj) {
+            console.log("EPUB DEBUG: " + message, obj || '');
+            // Add to page for visibility
+            const debugDiv = document.getElementById('debug-output') ||
+                (function() {
+                    const div = document.createElement('div');
+                    div.id = 'debug-output';
+                    div.style.position = 'fixed';
+                    div.style.bottom = '10px';
+                    div.style.right = '10px';
+                    div.style.backgroundColor = 'rgba(0,0,0,0.7)';
+                    div.style.color = 'white';
+                    div.style.padding = '10px';
+                    div.style.maxHeight = '200px';
+                    div.style.overflow = 'auto';
+                    div.style.zIndex = '9999';
+                    document.body.appendChild(div);
+                    return div;
+                })();
+            
+            const logEntry = document.createElement('div');
+            logEntry.textContent = message + (obj ? ': ' + JSON.stringify(obj) : '');
+            debugDiv.appendChild(logEntry);
+        }
+
+        // Global variables
+        var book = null;
+        var rendition = null;
+
+        function handlePrev() {
+            debug("Previous button clicked");
+            if (!rendition) {
+                debug("ERROR: rendition not available for prev");
+                return;
+            }
+            try {
+                rendition.prev().then(() => {
+                    debug("Navigation to previous page successful");
+                }).catch(err => {
+                    debug("Navigation to previous page failed", err.message);
+                });
+            } catch (err) {
+                debug("Error in prev navigation", err.message);
+            }
+        }
+
+        function handleNext() {
+            debug("Next button clicked");
+            if (!rendition) {
+                debug("ERROR: rendition not available for next");
+                return;
+            }
+            try {
+                rendition.next().then(() => {
+                    debug("Navigation to next page successful");
+                }).catch(err => {
+                    debug("Navigation to next page failed", err.message);
+                });
+            } catch (err) {
+                debug("Error in next navigation", err.message);
+            }
+        }
+
+        function handleKeydown(e) {
+            if (!rendition) {
+                debug("ERROR: rendition not available for keydown");
+                return;
+            }
+            if (e.keyCode === 37) {
+                debug("Left arrow key pressed");
+                rendition.prev();
+            }
+            if (e.keyCode === 39) {
+                debug("Right arrow key pressed");
+                rendition.next();
+            }
+        }
+
+        function initializeEPUB() {
+            debug("Initializing EPUB viewer");
+            
+            try {
+                // Use dedicated endpoint for EPUB files
+                const fileUrl = "/epub/" + encodeURIComponent("{{ file_path }}");
+                debug("Loading EPUB from URL", fileUrl);
+                // TEST_EPUB_URL: /epub/{{ file_path }}
+                
+                // Create book object
+                window.book = book = ePub(fileUrl);
+                debug("Book object created successfully");
+                console.log("Book object details:", book);
+                
+                if (!book) {
+                    throw new Error("Failed to initialize EPUB reader");
+                }
+
+                // Set up error handler
+                book.on('error', function(err) {
+                    debug("EPUB error event", err);
+                    document.getElementById("viewer").innerHTML =
+                        '<div class="error">Error loading EPUB: ' + err.message + '</div>';
+                });
+                
+                // Set up ready handler
+                book.on('ready', function() {
+                    debug("Book ready event fired");
+                });
+                
+                // Create rendition
+                debug("Creating rendition");
+                window.rendition = rendition = book.renderTo("viewer", {
+                    width: "100%",
+                    height: "100%",
+                    spread: "none",
+                    manager: "continuous",
+                    style: `
+                        body {
+                            margin: 0;
+                            padding: 20px;
+                            background-color: white;
+                            color: black;
+                            font-size: 1.2em;
+                            line-height: 1.5;
+                        }
+                        img {
+                            max-width: 100%;
+                        }
+                    `
+                });
+
+                // Hide iframe initially to prevent flash of unstyled content
+                const viewer = document.getElementById("viewer");
+                if (viewer) {
+                    viewer.style.visibility = "hidden";
+                }
+                
+                debug("Displaying rendition");
+                rendition.display()
+                    .then(() => {
+                        debug("Rendition displayed successfully");
+                        
+                        // Set up resize handler
+                        const resizeHandler = function() {
+                            try {
+                                if (rendition) {
+                                    rendition.resize();
+                                }
+                            } catch (err) {
+                                console.error("Resize error:", err);
+                            }
+                        };
+                        window.addEventListener('resize', resizeHandler);
+                        
+                        // Show content and initialize navigation
+                        setTimeout(() => {
+                            try {
+                                if (rendition) {
+                                    rendition.resize();
+                                    const viewer = document.getElementById('viewer');
+                                    if (viewer) {
+                                        viewer.style.visibility = 'visible';
+                                    }
+                                    // Initialize navigation
+                                    rendition.start();
+                                }
+                            } catch (err) {
+                                debug("Content display error", err.message);
+                            }
+                        }, 100);
+                        
+                        return rendition;
+                    })
+                    .catch(err => {
+                        debug("Rendition error", err);
+                        document.getElementById("viewer").innerHTML =
+                            '<div class="error">Error displaying EPUB: ' + err.message + '</div>';
+                    });
+
+                // Set up event listeners
+                debug("Setting up event listeners");
+                try {
+                    document.getElementById("prev").addEventListener("click", handlePrev);
+                    document.getElementById("next").addEventListener("click", handleNext);
+                    document.addEventListener("keydown", handleKeydown);
+                    
+                    // Add loading indicator
+                    const loadingIndicator = document.createElement('div');
+                    loadingIndicator.id = 'loading-indicator';
+                    loadingIndicator.style.position = 'fixed';
+                    loadingIndicator.style.top = '50%';
+                    loadingIndicator.style.left = '50%';
+                    loadingIndicator.style.transform = 'translate(-50%, -50%)';
+                    loadingIndicator.style.backgroundColor = 'rgba(0,0,0,0.7)';
+                    loadingIndicator.style.color = 'white';
+                    loadingIndicator.style.padding = '20px';
+                    loadingIndicator.style.borderRadius = '5px';
+                    loadingIndicator.style.zIndex = '1000';
+                    loadingIndicator.textContent = 'Loading EPUB...';
+                    document.body.appendChild(loadingIndicator);
+                    
+                    // Remove indicator when loaded
+                    book.on('ready', function() {
+                        const indicator = document.getElementById('loading-indicator');
+                        if (indicator) {
+                            indicator.remove();
+                        }
+                    });
+                    
+                } catch (err) {
+                    debug("Error setting up event listeners", err.message);
+                    console.error("Event listener setup error:", err);
+                }
+
+            } catch (err) {
+                debug("EPUB initialization error", err);
+                document.getElementById("viewer").innerHTML =
+                    '<div class="error">Failed to load EPUB: ' + err.message + '</div>';
+            }
+        }
+
+        // Initialize when DOM is loaded
+        debug("Setting up DOMContentLoaded listener");
+        document.addEventListener('DOMContentLoaded', initializeEPUB);
+    </script>
+    
+    <footer>
+        <p>&copy; 2025 Book Search Engine</p>
+    </footer>
+</body>
+</html>

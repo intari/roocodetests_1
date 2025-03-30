@@ -1,0 +1,163 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Indexing Books</title>
+    <link rel="stylesheet" href="/static/css/style.css">
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+</head>
+<body>
+    <header>
+        <h1>Indexing Books</h1>
+    </header>
+    
+    <nav class="nav">
+        <ul>
+            <li><a href="/">Home</a></li>
+            <li><a href="/files">File List</a></li>
+            <li><a href="/index_books">Re-Index Books</a></li>
+        </ul>
+    </nav>
+    
+    <div class="container">
+        <div class="progress-container">
+            <h2>Indexing Progress</h2>
+            <div class="progress-stats">
+                <span id="processed-files">0</span> of <span id="total-files">0</span> files processed
+                <span id="percentage">0%</span>
+            </div>
+            <div class="progress-bar">
+                <div class="progress-fill" id="progress-fill"></div>
+            </div>
+            
+            <div class="current-file" id="current-file">
+                Current file: Starting indexing...
+            </div>
+            
+            <div class="time-stats">
+                <div class="time-stat">
+                    <div>CPU cores:</div>
+                    <div>{{ used_cpus }} of {{ available_cpus }}</div>
+                </div>
+                <div class="time-stat">
+                    <div>Time elapsed:</div>
+                    <div id="elapsed-time">0m 0s</div>
+                </div>
+                <div class="time-stat">
+                    <div>Estimated remaining:</div>
+                    <div id="estimated-remaining">Calculating...</div>
+                </div>
+                <div class="time-stat">
+                    <div>Estimated completion:</div>
+                    <div id="estimated-completion">Calculating...</div>
+                </div>
+                <div class="time-stat">
+                    <div>Files per minute:</div>
+                    <div id="files-per-minute">0</div>
+                </div>
+            </div>
+            
+            <button class="abort-button" id="abort-button">Abort Indexing</button>
+        </div>
+        
+        <div class="progress-details">
+            <h3>Recent Errors</h3>
+            <div id="error-list" class="error-list">
+                No errors yet
+            </div>
+        </div>
+    </div>
+    
+    <footer>
+        <p>&copy; 2025 Intari</p>
+    </footer>
+    
+    <script>
+        const progressFill = document.getElementById('progress-fill');
+        const processedFiles = document.getElementById('processed-files');
+        const totalFiles = document.getElementById('total-files');
+        const percentage = document.getElementById('percentage');
+        const currentFile = document.getElementById('current-file');
+        const elapsedTime = document.getElementById('elapsed-time');
+        const estimatedRemaining = document.getElementById('estimated-remaining');
+        const estimatedCompletion = document.getElementById('estimated-completion');
+        const filesPerMinute = document.getElementById('files-per-minute');
+        const errorList = document.getElementById('error-list');
+        const abortButton = document.getElementById('abort-button');
+        
+        let updateInterval;
+        let speedChart;
+        
+        // Update progress every second
+        function updateProgress() {
+            // Get browser timezone
+            const timezone = Intl.DateTimeFormat().resolvedOptions().timeZone;
+            
+            fetch('/indexing_progress', {
+                headers: {
+                    'X-Timezone': timezone
+                }
+            })
+                .then(response => response.json())
+                .then(data => {
+                    if (data.status === 'not_running') {
+                        // Indexing completed
+                        clearInterval(updateInterval);
+                        window.location.href = '/files';
+                        return;
+                    }
+                    
+                    // Update progress bar
+                    progressFill.style.width = `${data.percentage}%`;
+                    processedFiles.textContent = data.processed_files;
+                    totalFiles.textContent = data.total_files;
+                    percentage.textContent = `${data.percentage.toFixed(1)}%`;
+                    
+                    // Update current file
+                    currentFile.textContent = `Current file: ${data.current_file || 'Processing...'}`;
+                    
+                    // Update time stats
+                    elapsedTime.textContent = data.elapsed_time;
+                    estimatedRemaining.textContent = data.estimated_remaining;
+                    estimatedCompletion.textContent = data.estimated_completion;
+                    
+                    // Calculate files per minute
+                    if (data.elapsed_time) {
+                        const [min, sec] = data.elapsed_time.split(/[ms]/).filter(Boolean).map(Number);
+                        const totalSeconds = min * 60 + sec;
+                        if (totalSeconds > 0) {
+                            const fpm = (data.processed_files / totalSeconds * 60).toFixed(1);
+                            filesPerMinute.textContent = fpm;
+                        }
+                    }
+                    
+                    // Update errors
+                    if (data.errors && data.errors.length > 0) {
+                        errorList.innerHTML = data.errors.map(err => 
+                            `<div class="error-item">${err}</div>`
+                        ).join('');
+                    }
+                })
+                .catch(error => {
+                    console.error('Error fetching progress:', error);
+                });
+        }
+        
+        // Start updating progress
+        updateInterval = setInterval(updateProgress, 1000);
+        updateProgress();
+        
+        // Handle abort button
+        abortButton.addEventListener('click', () => {
+            if (confirm('Are you sure you want to abort indexing?')) {
+                fetch('/abort_indexing', { method: 'POST' })
+                    .then(response => response.json())
+                    .then(data => {
+                        alert(data.message);
+                    });
+            }
+        });
+    </script>
+</body>
+</html>

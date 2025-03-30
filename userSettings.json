@@ -1,0 +1,45 @@
+[
+  {
+    "name": "cors_allow_origin",
+    "label": "CORS Allowed Origin",
+    "required": false,
+    "default": "*",
+    "description": "Value for Access-Control-Allow-Origin header, typically '*' for public APIs"
+  },
+  {
+    "name": "cors_allow_methods",
+    "label": "CORS Allowed Methods",
+    "required": false,
+    "default": "GET, POST, PUT",
+    "description": "Comma-separated HTTP methods for Access-Control-Allow-Methods header"
+  },
+  {
+    "name": "cors_allow_headers",
+    "label": "CORS Allowed Headers",
+    "required": false,
+    "default": "Content-Type",
+    "description": "Comma-separated headers for Access-Control-Allow-Headers"
+  },
+  {
+    "name": "proxyUrl",
+    "label": "Proxy Server URL",
+    "required": false,
+    "default": "",
+    "description": "URL of the proxy server to use for external requests"
+  },
+  {
+    "name": "bookSearchAPIKey",
+    "label": "Search Engine API Key",
+    "type": "password",
+    "default":"",
+    "required":false,
+    "description": "API Key to use for while making requests (not yet used)"
+  },
+  {
+    "name": "apiUrl",
+    "label": "API Base URL",
+    "required": false,
+    "default": "http://localhost:8000",
+    "description": "Base URL for the API endpoints"
+  }
+]

@@ -1,0 +1,64 @@
+и<!DOCTYPE html>
+<html>
+<head>
+    <title>{{ file_path }}</title>
+    <link rel="stylesheet" href="/static/css/style.css">
+    <style>
+        pre {
+            background-color: white;
+            padding: 20px;
+            border-radius: 5px;
+            white-space: pre-wrap;
+            word-wrap: break-word;
+        }
+        .html-content {
+            background-color: white;
+            padding: 20px;
+            border-radius: 5px;
+        }
+        .html-content hr {
+            margin: 30px 0;
+            border: 0;
+            border-top: 1px solid #eee;
+        }
+        .html-content h1,
+        .html-content h2,
+        .html-content h3,
+        .html-content h4,
+        .html-content h5,
+        .html-content h6 {
+            margin: 1em 0 0.5em 0;
+            line-height: 1.2;
+        }
+        .html-content p {
+            margin: 0 0 1em 0;
+            line-height: 1.5;
+        }
+    </style>
+</head>
+<body>
+    <header>
+        <h1>File: {{ file_path }}</h1>
+    </header>
+    
+    <nav class="nav">
+        <ul>
+            <li><a href="/">Home</a></li>
+            <li><a href="/files">File List</a></li>
+            <li><a href="/index_books">Re-Index Books</a></li>
+        </ul>
+    </nav>
+    
+    <div class="container">
+        {% if is_html %}
+            <div class="html-content">{{ content|safe }}</div>
+        {% else %}
+            <pre>{{ content }}</pre>
+        {% endif %}
+    </div>
+    
+    <footer>
+        <p>&copy; 2025 Book Search Engine</p>
+    </footer>
+</body>
+</html>

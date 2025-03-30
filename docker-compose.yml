@@ -1,0 +1,39 @@
+version: '3.7'
+services:
+  booksearch_app:
+    build: .
+    container_name: booksearch_app
+    ports:
+      - "8000:5000"
+    environment:
+      - ELASTICSEARCH_HOST=booksearch_elastic
+      - BASE_URL=http://localhost:8000
+      - CPU_LIMIT=${CPU_LIMIT}
+      - SNIPPET_CHAR_LIMIT=${SNIPPET_CHAR_LIMIT}
+    volumes:
+      - ./smb_share:/books
+    depends_on:
+      - booksearch_elastic
+    restart: unless-stopped
+    deploy:
+      resources:
+        limits:
+          cpus: ${CPU_LIMIT}
+          memory: 2G
+
+  booksearch_elastic:
+    container_name: booksearch_elastic
+    image: bitnami/elasticsearch:latest
+    ports:
+      - "9200:9200"
+      - "9300:9300"
+    environment:
+      - discovery.type=single-node
+      - ELASTICSEARCH_USERNAME=admin
+      - ELASTICSEARCH_PASSWORD=password
+    restart: unless-stopped
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:9200"]
+      interval: 30s
+      timeout: 10s
+      retries: 5

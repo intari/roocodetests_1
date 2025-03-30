@@ -1,0 +1,141 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Book Files</title>
+    <link rel="stylesheet" href="/static/css/style.css">
+    <style>
+        .file-list {
+            list-style: none;
+            padding: 0;
+        }
+        .file-item {
+            display: flex;
+            justify-content: space-between;
+            padding: 8px 0;
+            border-bottom: 1px solid #eee;
+        }
+        .file-name {
+            flex: 1;
+            word-break: break-all;
+        }
+        .file-size {
+            color: #666;
+            min-width: 80px;
+            text-align: right;
+        }
+        .book-title {
+            font-weight: bold;
+            color: #333;
+        }
+        .file-name-muted {
+            color: #999;
+            font-size: 0.9em;
+            margin-left: 8px;
+        }
+        .summary {
+            background: #f5f5f5;
+            padding: 15px;
+            border-radius: 5px;
+            margin-bottom: 20px;
+        }
+        .summary-item {
+            display: flex;
+            justify-content: space-between;
+            margin-bottom: 5px;
+        }
+        .summary-label {
+            font-weight: bold;
+        }
+        .indexing-status {
+            background: #fff8e1;
+            padding: 15px;
+            border-radius: 5px;
+            margin-bottom: 20px;
+            border-left: 4px solid #ffc107;
+        }
+        .indexing-link {
+            color: #2196f3;
+            text-decoration: none;
+        }
+        .indexing-link:hover {
+            text-decoration: underline;
+        }
+        .plain-view-link {
+            font-size: 0.8em;
+            color: #666;
+            text-decoration: none;
+            margin-left: 8px;
+        }
+        .plain-view-link:hover {
+            text-decoration: underline;
+            color: #2196f3;
+        }
+    </style>
+</head>
+<body>
+    <header>
+        <h1>Book Files</h1>
+    </header>
+    
+    <nav class="nav">
+        <ul>
+            <li><a href="/">Home</a></li>
+            <li><a href="/files">File List</a></li>
+            <li><a href="/index_books">Re-Index Books</a></li>
+        </ul>
+    </nav>
+    
+    <div class="container">
+        <div class="summary">
+            <div class="summary-item">
+                <span class="summary-label">Total Files:</span>
+                <span>{{ total_files }}</span>
+            </div>
+            <div class="summary-item">
+                <span class="summary-label">Total Size:</span>
+                <span>{{ total_size_mb }} MB</span>
+            </div>
+        </div>
+
+        {% if indexing_in_progress %}
+        <div class="indexing-status">
+            Indexing is currently in progress.
+            <a href="/index_books" class="indexing-link">View re-indexing progress</a>
+        </div>
+        {% endif %}
+        
+        <h2>Available Files</h2>
+        
+        {% if files %}
+        <ul class="file-list">
+            {% for file in files %}
+            <li class="file-item">
+                <span class="file-name">
+                    <a href="/file/{{ file.path }}">
+                    {% if file.path.endswith('.epub') %}
+                    <br><a href="/file/{{ file.path }}?format=html" class="plain-view-link">(View as HTML)</a>
+                    {% endif %}
+                        {% if file.title != file.name %}
+                            <span class="book-title">{{ file.title }}</span>
+                            <span class="file-name-muted">{{ file.name }}</span>
+                        {% else %}
+                            {{ file.name }}
+                        {% endif %}
+                    </a>
+                </span>
+                <span class="file-size">{{ file.size_mb }} MB</span>
+            </li>
+            {% endfor %}
+        </ul>
+        {% else %}
+        <p>No files available. Please add files to the books directory.</p>
+        {% endif %}
+    </div>
+    
+    <footer>
+        <p>&copy; 2025 Intari</p>
+    </footer>
+</body>
+</html>

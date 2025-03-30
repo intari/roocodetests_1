@@ -1,0 +1,56 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Book Search</title>
+    <link rel="stylesheet" href="/static/css/style.css">
+</head>
+<body>
+    <header>
+        <h1>Book Search Engine</h1>
+    </header>
+    
+    <nav class="nav">
+        <ul>
+            <li><a href="/">Home</a></li>
+            <li><a href="/files">File List</a></li>
+            <li><a href="/index_books">Re-Index Books</a></li>
+        </ul>
+    </nav>
+    
+    <div class="container">
+        <div class="search-container">
+            <form action="/search" method="GET">
+                <input type="text" name="query" placeholder="Search for content..." class="search-box" value="{{ query }}">
+                <button type="submit" class="search-button">Search</button>
+            </form>
+        </div>
+        
+        {% if results %}
+        <div class="results">
+            <h2>Search Results</h2>
+            {% for result in results %}
+            <div class="result-item">
+                <h3>{{ result.file_path.split('/')[-1] }}</h3>
+                <p>{{ result.snippet }}</p>
+                <div class="file-actions">
+                    <a href="/file/{{ result.file_path.replace('/books/', '') }}" class="file-action">View Full File</a>
+                    <span class="action-separator">|</span>
+                    <a href="/file/{{ result.file_path.replace('/books/', '') }}?format=html" class="file-action">View as HTML</a>
+                </div>
+            </div>
+            {% endfor %}
+        </div>
+        {% elif query %}
+        <div class="results">
+            <p>No results found for "{{ query }}"</p>
+        </div>
+        {% endif %}
+    </div>
+    
+    <footer>
+        <p>&copy; 2025 Intari</p>
+    </footer>
+</body>
+</html>
