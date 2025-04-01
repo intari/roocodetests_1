@@ -9,18 +9,18 @@ RUN pip install flask elasticsearch ebooklib beautifulsoup4 PyPDF2 pytz
 RUN mkdir -p /books && chmod 777 /books
 
 # Copy the API code and static files
-COPY api/app.py .
-COPY api/static /app/static
-COPY api/templates /app/templates
+COPY src/api/app.py .
+COPY src/api/static /app/static
+COPY src/api/templates /app/templates
 
 # Expose the API port
 EXPOSE 5000
 
 # Copy the indexing script
-COPY index.py .
+COPY src/core/index.py .
 
 # Copy the test file
-COPY api/test_app.py .
+COPY tests/unit/test_app.py .
 
 # Add a dummy file to invalidate cache
 ADD dummy.txt .

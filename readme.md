@@ -98,6 +98,16 @@ docker-compose logs -f api
 
 ## Maintenance
 
+## restart & rebuild
+```bash
+docker-compose down && docker-compose up -d --build
+```
+
+Logs 
+```bash
+ docker logs booksearch_app  -f
+```
+
 ### Log Rotation
 Configure Docker log rotation in `/etc/docker/daemon.json`:
 ```json

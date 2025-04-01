@@ -7,7 +7,7 @@ services:
       - "8000:5000"
     environment:
       - ELASTICSEARCH_HOST=booksearch_elastic
-      - BASE_URL=http://localhost:8000
+      - BASE_URL=${BASE_URL}
       - CPU_LIMIT=${CPU_LIMIT}
       - SNIPPET_CHAR_LIMIT=${SNIPPET_CHAR_LIMIT}
     volumes:
