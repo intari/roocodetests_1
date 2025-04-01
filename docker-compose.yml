@@ -11,7 +11,7 @@ services:
       - CPU_LIMIT=${CPU_LIMIT}
       - SNIPPET_CHAR_LIMIT=${SNIPPET_CHAR_LIMIT}
     volumes:
-      - ./smb_share:/books
+      - ${SMB_SHARE_PATH}:/books
     depends_on:
       - booksearch_elastic
     restart: unless-stopped
