@@ -46,17 +46,22 @@ function search_books(params, userSettings) {
     
     return response.json();
   })
-  .then(results => {
-    if (!Array.isArray(results)) {
-      throw new Error(`Invalid response format. Expected array, got ${typeof results}`);
+  .then(data => {
+    // Validate response structure
+    if (!data || typeof data !== 'object') {
+      throw new Error('Invalid response format - expected root object');
+    }
+    
+    if (!Array.isArray(data.results)) {
+      throw new Error(`Invalid results format. Expected array, got ${typeof data.results}`);
     }
 
-    if (results.length === 0) {
+    if (data.results.length === 0) {
       return 'No books found matching your search';
     }
 
     // Format results with book paths and snippets
-    return results.map(result => {
+    return data.results.map(result => {
       if (!result.file_path || !result.snippet) {
         throw new Error('Invalid result format - missing required fields');
       }
