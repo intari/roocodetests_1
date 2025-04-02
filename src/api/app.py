@@ -78,6 +78,9 @@ def search():
         return render_template('search.html', query='')
 
     try:
+        # Log the query for debugging
+        print(f"Searching for query: {query} (length: {len(query)})")
+        
         results = es.search(index=INDEX_NAME, query={'match': {'content': query}})
         hits = results['hits']['hits']
         
@@ -86,19 +89,39 @@ def search():
             file_path = hit['_source']['file_path']
             content = hit['_source']['content']
             
-            # Highlight snippet with Unicode support
+            # Log content sample for debugging
+            print(f"Processing file: {file_path}")
+            print(f"Content sample: {content[:100]}...")
+            
+            # Highlight snippet with improved Unicode support
             snippet_char_limit = int(os.environ.get("SNIPPET_CHAR_LIMIT", 100))
             try:
-                # Case-insensitive Unicode search
-                index = content.casefold().find(query.casefold())
-                if index != -1:
+                # Normalize both content and query for better matching
+                normalized_content = content.casefold()
+                normalized_query = query.casefold()
+                
+                # Find all matches and pick the best one
+                matches = []
+                start_idx = 0
+                while True:
+                    index = normalized_content.find(normalized_query, start_idx)
+                    if index == -1:
+                        break
+                    matches.append(index)
+                    start_idx = index + len(normalized_query)
+                
+                if matches:
+                    # Use the first match for snippet
+                    index = matches[0]
                     start = max(0, index - snippet_char_limit)
                     end = min(len(content), index + snippet_char_limit + len(query))
                     snippet = content[start:end]
                 else:
                     snippet = "No snippet found"
+                    print(f"No match found for query in content")
             except Exception as e:
                 snippet = f"Error generating snippet: {str(e)}"
+                print(f"Snippet generation error: {str(e)}")
                 
             # Get base URL from environment
             base_url = os.environ.get("BASE_URL", "http://localhost:8000")
@@ -448,36 +471,75 @@ def reset_index():
         if es.indices.exists(index=INDEX_NAME):
             es.indices.delete(index=INDEX_NAME)
         
-        # Create new index with mapping and Cyrillic analyzer
-        es.indices.create(index=INDEX_NAME, body={
-            "settings": {
-                "number_of_shards": 1,
-                "number_of_replicas": 0,
-                "analysis": {
-                    "analyzer": {
-                        "cyrillic_analyzer": {
-                            "type": "custom",
-                            "tokenizer": "standard",
-                            "filter": [
-                                "lowercase",
-                                "russian_morphology",
-                                "english_morphology"
-                            ]
+        # Verify required plugins are installed
+        try:
+            plugins = es.cat.plugins(format='json')
+            plugin_names = [p['component'] for p in plugins]
+            
+            if 'analysis-stempel' not in plugin_names:
+                return jsonify({
+                    "error": "Missing required plugin",
+                    "message": "Please install analysis-stempel plugin for Russian support",
+                    "solution": "Run: bin/elasticsearch-plugin install analysis-stempel"
+                }), 500
+
+            # Create index with cyrillic analyzer
+            es.indices.create(index=INDEX_NAME, body={
+                "settings": {
+                    "number_of_shards": 1,
+                    "number_of_replicas": 0,
+                    "analysis": {
+                        "filter": {
+                            "russian_stop": {
+                                "type": "stop",
+                                "stopwords": "_russian_"
+                            },
+                            "russian_stemmer": {
+                                "type": "stemmer",
+                                "language": "russian"
+                            }
+                        },
+                        "analyzer": {
+                            "cyrillic_analyzer": {
+                                "tokenizer": "standard",
+                                "filter": [
+                                    "lowercase",
+                                    "russian_stop",
+                                    "russian_stemmer"
+                                ]
+                            }
+                        }
+                    }
+                },
+                "mappings": {
+                    "properties": {
+                        "file_path": {"type": "keyword"},
+                        "content": {
+                            "type": "text",
+                            "analyzer": "cyrillic_analyzer",
+                            "search_analyzer": "cyrillic_analyzer"
                         }
                     }
                 }
-            },
-            "mappings": {
-                "properties": {
-                    "file_path": {"type": "keyword"},
-                    "content": {
-                        "type": "text",
-                        "analyzer": "cyrillic_analyzer",
-                        "search_analyzer": "cyrillic_analyzer"
+            })
+        except Exception as e:
+            # Fallback to basic configuration if advanced filters aren't available
+            es.indices.create(index=INDEX_NAME, body={
+                "settings": {
+                    "number_of_shards": 1,
+                    "number_of_replicas": 0
+                },
+                "mappings": {
+                    "properties": {
+                        "file_path": {"type": "keyword"},
+                        "content": {
+                            "type": "text",
+                            "analyzer": "standard",
+                            "search_analyzer": "standard"
+                        }
                     }
                 }
-            }
-        })
+            })
         
         return jsonify({"status": "success", "message": "Index reset successfully"})
     except Exception as e:
