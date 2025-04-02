@@ -12,6 +12,7 @@ import multiprocessing
 from src.core.index import index_files, get_progress
 from io import StringIO
 import sys
+import re
 
 app = Flask(__name__, static_folder='static')
 
@@ -93,32 +94,98 @@ def search():
             print(f"Processing file: {file_path}")
             print(f"Content sample: {content[:100]}...")
             
-            # Highlight snippet with improved Unicode support
+            # Highlight snippet with improved matching for multi-word queries
             snippet_char_limit = int(os.environ.get("SNIPPET_CHAR_LIMIT", 100))
             try:
-                # Normalize both content and query for better matching
+                # Normalize content and query
                 normalized_content = content.casefold()
                 normalized_query = query.casefold()
                 
-                # Find all matches and pick the best one
-                matches = []
-                start_idx = 0
-                while True:
-                    index = normalized_content.find(normalized_query, start_idx)
-                    if index == -1:
-                        break
-                    matches.append(index)
-                    start_idx = index + len(normalized_query)
+                def find_best_snippet(query, words):
+                    try:
+                        # Try exact phrase match
+                        exact_pos = normalized_content.find(query)
+                        if exact_pos != -1:
+                            start = max(0, exact_pos - snippet_char_limit//2)
+                            end = min(len(content), exact_pos + len(query) + snippet_char_limit//2)
+                            snippet = content[start:end]
+                            snippet = snippet.replace(query, f"**{query}**")
+                            return snippet
+
+                        # Try all words in any order
+                        all_word_positions = []
+                        for word in words:
+                            if not word:
+                                continue
+                            start_idx = 0
+                            while True:
+                                index = normalized_content.find(word, start_idx)
+                                if index == -1:
+                                    break
+                                all_word_positions.append((index, index + len(word)))
+                                start_idx = index + len(word)
+
+                        if all_word_positions:
+                            all_word_positions.sort()
+                            # Find region with most query words
+                            best_start = 0
+                            best_end = 0
+                            max_words = 0
+                            
+                            for i in range(len(all_word_positions)):
+                                current_start = all_word_positions[i][0]
+                                current_end = current_start + snippet_char_limit
+                                words_in_region = 1
+                                
+                                for j in range(i+1, len(all_word_positions)):
+                                    if all_word_positions[j][0] < current_end:
+                                        words_in_region += 1
+                                    else:
+                                        break
+                                
+                                if words_in_region > max_words:
+                                    max_words = words_in_region
+                                    best_start = max(0, current_start - snippet_char_limit//2)
+                                    best_end = min(len(content), current_end + snippet_char_limit//2)
+                            
+                            if max_words > 0:
+                                snippet = content[best_start:best_end]
+                                for word in words:
+                                    snippet = snippet.replace(word, f"**{word}**")
+                                return snippet
+
+                        # Recursively try with fewer words
+                        if len(words) > 1:
+                            for i in range(len(words)):
+                                reduced_words = words[:i] + words[i+1:]
+                                snippet = find_best_snippet(' '.join(reduced_words), reduced_words)
+                                if snippet and snippet != "No snippet found":
+                                    return snippet
+
+                        # Final fallback to any single word
+                        for word in words:
+                            if not word:
+                                continue
+                            word_pos = normalized_content.find(word)
+                            if word_pos != -1:
+                                start = max(0, word_pos - snippet_char_limit//2)
+                                end = min(len(content), word_pos + len(word) + snippet_char_limit//2)
+                                return content[start:end].replace(word, f"**{word}**")
+
+                        return "No snippet found"
+                    except Exception as e:
+                        print(f"Error in find_best_snippet: {str(e)}")
+                        return "Error generating snippet"
+
+                # Split query into words (handles hyphens and whitespace)
+                import re
+                query_words = [w for w in re.split(r'[\s-]+', normalized_query) if w]
+                snippet = find_best_snippet(normalized_query, query_words)
                 
-                if matches:
-                    # Use the first match for snippet
-                    index = matches[0]
-                    start = max(0, index - snippet_char_limit)
-                    end = min(len(content), index + snippet_char_limit + len(query))
-                    snippet = content[start:end]
-                else:
-                    snippet = "No snippet found"
-                    print(f"No match found for query in content")
+                # Use the snippet we already generated from find_best_snippet
+                if not snippet or snippet == "No snippet found":
+                    # Final fallback to first 100 characters
+                    snippet = content[:snippet_char_limit]
             except Exception as e:
                 snippet = f"Error generating snippet: {str(e)}"
                 print(f"Snippet generation error: {str(e)}")
@@ -380,11 +447,9 @@ def index_books():
     available_cpus = multiprocessing.cpu_count()
     used_cpus = float(cpu_limit) if cpu_limit else max(1, available_cpus - 1)
     
-    # Capture stdout to a string
-    old_stdout = sys.stdout
-    sys.stdout = captured_output = StringIO()
-
     try:
+        # Configure logging to capture output
+        logging.basicConfig(level=logging.INFO)
         # Start indexing in a separate thread
         from threading import Thread
         index_thread = Thread(target=index_files, args=("/books",))
@@ -401,15 +466,12 @@ def index_books():
         
     except Exception as e:
         logging.error(f"Indexing failed: {e}")
-        sys.stdout = old_stdout
         
         if request.headers.get('Accept') == 'application/json':
             return jsonify({"error": str(e)}), 500
         
         # Create a simple HTML response for errors
         return render_template('indexing_error.html', error=str(e))
-    finally:
-        sys.stdout = old_stdout
 
 @app.route('/indexing_progress', methods=['GET'])
 def get_indexing_progress():

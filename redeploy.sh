@@ -1,4 +1,5 @@
 #!/bin/bash
+pause
 git reset --hard
 git pull -v
 docker-compose down
