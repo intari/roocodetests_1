@@ -103,6 +103,12 @@ docker-compose logs -f api
 docker-compose down && docker-compose up -d --build
 ```
 
+```bash
+docker-compose down && docker-compose up -d --force-recreate --build 
+```
+docker-compose up --force-recreate --build
+
+
 Logs (app)
 ```bash
  docker logs booksearch_app  -f
