@@ -1,9 +1,9 @@
 
 # What it IS?
 
-## TypeMind Plugin: EPUB/PDF/TXT Search Integration  
 
-A plugin for [TypeMind](https://docs.typingmind.com/plugins/build-a-typingmind-plugin) that mimics the **WebSearch** feature but focuses on retrieving books/documents. Users can query, e.g., *"Find me books about Hecate"*, and the plugin returns **clickable links** to relevant files (EPUB, PDF, TXT).  
+A plugin for [TypeMind](https://docs.typingmind.com/plugins/build-a-typingmind-plugin) that mimics the **WebSearch** feature but focuses on retrieving books/documents. Users can query, e.g., *"Find me books about Hecate"*, and the plugin returns **clickable links** to relevant files (EPUB, PDF, TXT)
+and server-side support code to use it
 
 ### Features  
 - **File Formats**: Supports EPUB, PDF, and TXT (assumed compatibility).  
@@ -150,6 +150,16 @@ git pull origin main
 2. Rebuild containers:
 ```bash
 docker-compose up -d --build
+```
+
+## Running in dev
+- tests 
+```bash
+./scripts/run_tests.sh
+```
+- app (and not deteach)
+```bash
+docker-compose up --build
 ```
 
 ## Troubleshooting

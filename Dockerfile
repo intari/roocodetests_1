@@ -29,7 +29,7 @@ COPY tests/unit/ tests/unit/
 ADD dummy.txt .
 
 # Set Python path
-ENV PYTHONPATH=/app/src
+ENV PYTHONPATH=/app
 
 # Command to run the API
 CMD ["python", "src/api/app.py"]
