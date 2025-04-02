@@ -1,29 +1,13 @@
 #!/bin/bash
 
-echo "Setting up test environment..."
+# Get absolute path to project root
+PROJECT_ROOT=$(dirname $(dirname $(realpath $0)))
 
-echo "Checking Python version..."
-python3 --version || {
-    echo "Python 3 not found. Please install Python 3.10+ first."
-    exit 1
-}
+# Run the test container
+docker-compose -f $PROJECT_ROOT/docker-compose.yml up -d booksearch_tests
 
-echo "Installing Python dependencies..."
-python3 -m pip install --upgrade pip --user || {
-    echo "Failed to upgrade pip"
-    exit 1
-}
+# Follow the logs
+docker logs -f booksearch_tests
 
-pip3 install -r requirements.txt --user || {
-    echo "Failed to install dependencies" 
-    exit 1
-}
-
-echo "Running EPUB viewer tests..."
-cd api
-python3 -m pytest test_epub_viewer.py -v || {
-    echo "Some tests failed"
-    exit 1
-}
-
-echo "All tests completed successfully!"
+# Clean up
+docker-compose -f $PROJECT_ROOT/docker-compose.yml down

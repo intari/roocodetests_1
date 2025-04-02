@@ -37,3 +37,11 @@ services:
       interval: 30s
       timeout: 10s
       retries: 5
+
+  booksearch_tests:
+    build: .
+    container_name: booksearch_tests
+    volumes:
+      - ./test_data:/app/test_data
+      - ./tests:/app/tests
+    command: sh -c "cd /app && PYTHONPATH=/app python -m unittest tests.unit.test_epub_extraction -v"
