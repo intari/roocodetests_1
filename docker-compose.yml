@@ -9,6 +9,8 @@ services:
       - ELASTICSEARCH_HOST=booksearch_elastic
       - BASE_URL=${BASE_URL}
       - CPU_LIMIT=${CPU_LIMIT}
+      - ADMIN_USER=${ADMIN_USER}
+      - ADMIN_PASSWORD=${ADMIN_PASSWORD}
       - SNIPPET_CHAR_LIMIT=${SNIPPET_CHAR_LIMIT}
     volumes:
       - ${SMB_SHARE_PATH}:/books
@@ -29,11 +31,12 @@ services:
       - "9300:9300"
     environment:
       - discovery.type=single-node
-      - ELASTICSEARCH_USERNAME=admin
-      - ELASTICSEARCH_PASSWORD=password
+      - ELASTICSEARCH_USERNAME=${ELASTICSEARCH_USERNAME}
+      - ELASTICSEARCH_PASSWORD=${ELASTICSEARCH_PASSWORD}
+      - ELASTICSEARCH_PLUGINS=analysis-stempel
     restart: unless-stopped
     healthcheck:
-      test: ["CMD", "curl", "-f", "http://localhost:9200"]
+      test: ["CMD", "curl", "-f", "http://localhost:9200/_nodes/plugins?filter_path=nodes.*.plugins"]
       interval: 30s
       timeout: 10s
       retries: 5
