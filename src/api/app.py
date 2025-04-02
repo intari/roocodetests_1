@@ -104,12 +104,14 @@ def search():
                 file_path = file_path[len("/books/"):]
 
             url = f"{base_url}/{file_path}"
-            raw_url = f"{base_url}/file/{file_path}?format=html"
-            
+            raw_url_old = f"{base_url}/file/{file_path}?format=html"
+            raw_url = f"{base_url}/file_html/{file_path}"
+
             search_results.append({
                 "file_path": file_path,
                 "url": url,
                 "raw_url": raw_url,
+                "raw_url_old": raw_url_old,
                 "snippet": snippet,
                 "score": hit['_score']
             })
@@ -193,8 +195,70 @@ def list_files():
             return jsonify({"error": str(e)}), 500
         return render_template('files.html', error=str(e))
 
+@app.route('/file_html/<path:file_path>', methods=['GET'])
+def get_file_html(file_path):
+    """Serve the HTML version of the file"""
+    # Ensure the file path is within the /books directory
+    books_dir = "/books"
+    # TODO: remove this logic from regular erv
+    
+    # Decode URL-encoded path and normalize
+    decoded_path = unquote(file_path)
+    # Remove any leading slashes or duplicate 'books/' segments
+    decoded_path = decoded_path.lstrip('/')
+    if decoded_path.startswith('books/'):
+        decoded_path = decoded_path[6:]
+    
+    # Join paths safely
+    full_path = os.path.normpath(os.path.join(books_dir, decoded_path))
+    
+    # Validate the path is within the books directory
+    if not os.path.abspath(full_path).startswith(os.path.abspath(books_dir)):
+        return jsonify({"error": "Access denied: File path outside of books directory"}), 403
+
+    try:
+        # Handle EPUB files
+        if file_path.lower().endswith('.epub'):
+                # Convert EPUB to HTML
+                try:
+                    book = epub.read_epub(full_path)
+                    html_content = []
+                    for item in book.get_items():
+                        if item.get_type() == ebooklib.ITEM_DOCUMENT:
+                            content = item.get_content()
+                            if content:
+                                soup = BeautifulSoup(content, 'html.parser')
+                                # Preserve basic formatting tags
+                                for tag in soup.find_all():
+                                    if tag.name not in ['h1', 'h2', 'h3', 'h4', 'h5', 'h6', 'p', 'br', 'div', 'span', 'strong', 'em', 'b', 'i', 'ul', 'ol', 'li']:
+                                        tag.unwrap()
+                                html_content.append(str(soup))
+                except Exception as e:
+                    logging.error(f"Error processing EPUB {full_path}: {str(e)}")
+                    return jsonify({"error": f"Failed to process EPUB: {str(e)}"}), 500
+                return render_template('text_file.html',
+                                   file_path=file_path,
+                                   content='<hr>'.join(html_content),
+                                   is_html=True)
+        
+        # Handle regular text files
+        with open(full_path, 'r', encoding='utf-8', errors='ignore') as f:
+            content = f.read()
+        
+        # If it's an API request or the Accept header doesn't include HTML, return plain text
+        if request.headers.get('Accept') == 'application/json' or 'text/html' not in request.headers.get('Accept', ''):
+            return content, 200, {'Content-Type': 'text/plain; charset=utf-8'}
+        
+        # Otherwise, render a simple HTML page with the content
+        return render_template('text_file.html', file_path=file_path, content=content)
+    except Exception as e:
+        return jsonify({"error": str(e)}), 404
+
+
+
 @app.route('/file/<path:file_path>', methods=['GET'])
 def get_file(file_path):
+    """Serve the file with proper headers"""
     # Ensure the file path is within the /books directory
     books_dir = "/books"
     

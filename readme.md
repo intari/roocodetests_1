@@ -103,10 +103,19 @@ docker-compose logs -f api
 docker-compose down && docker-compose up -d --build
 ```
 
-Logs 
+Logs (app)
 ```bash
  docker logs booksearch_app  -f
 ```
+Logs  (elasticsearch)
+```bash
+ docker logs booksearch_elastic  -f
+```
+Logs  (both)
+```bash
+ docker-compose logs -f
+```
+
 
 ### Log Rotation
 Configure Docker log rotation in `/etc/docker/daemon.json`:

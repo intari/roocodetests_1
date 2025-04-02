@@ -115,7 +115,7 @@
                 <span class="file-name">
                     <a href="/file/{{ file.path }}">
                     {% if file.path.endswith('.epub') %}
-                    <br><a href="/file/{{ file.path }}?format=html" class="plain-view-link">(View as HTML)</a>
+                    <br><a href="/file_html/{{ file.path }}" class="plain-view-link">(View as HTML)</a>
                     {% endif %}
                         {% if file.title != file.name %}
                             <span class="book-title">{{ file.title }}</span>

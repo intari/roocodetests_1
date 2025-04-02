@@ -68,19 +68,40 @@ function search_books(params, userSettings) {
       
       // Create properly encoded URL
       let formattedUrl = '';
+      console.log(`Result: ${JSON.stringify(result)}`); // Debugging log
+      console.log(`Raw URL: ${result.raw_url}`); // Debugging log
+
       if (result.raw_url) {
         try {
           // Split URL into parts and encode components separately
           const url = new URL(result.raw_url);
-          const pathParts = url.pathname.split('/').map(part =>
-            encodeURIComponent(part).replace(/'/g, "%27")
+          console.log(`Raw URL: ${result.raw_url}`); // Debugging log
+          //const pathParts = url.pathname.split('/').map(part =>
+          //  encodeURIComponent(part).replace(/'/g, "%27")
+          //);
+          const pathParts = url.pathname.split('/').map(part => 
+            encodeURIComponent(decodeURIComponent(part)) // fix double encoding
+              .replace(/'/g, "%27")
           );
-          const search = url.search ? '?' + encodeURIComponent(url.search.slice(1)) : '';
-          formattedUrl = `${url.origin}${pathParts.join('/')}${search}`;
+          console.log(`Path parts: ${pathParts}`); // Debugging log
+
+
+          // Correct encoding of query params
+          //const search = url.search ? '?' + encodeURIComponent(url.search.slice(1)) : '';
+          const search = url.searchParams.toString(); // automatic encode of param
+          console.log(`Search params: ${search}`); // Debugging log
+          //formattedUrl = `${url.origin}${pathParts.join('/')}${search}`;
+          formattedUrl = `${url.origin}${pathParts.join('/')}${search ? `?${search}` : ''}`;
+          console.log(`Formatted URL: ${formattedUrl}`); // Debugging log
+
         } catch (e) {
+          console.error('Error parsing URL:', e); // Debugging log
           formattedUrl = result.raw_url; // Fallback to original if URL parsing fails
+          console.log(`Fallback URL: ${formattedUrl}`); // Debugging log
         }
       }
+
+      
       
       return `Book: ${result.file_path}\n` +
              `Snippet: ${result.snippet}\n` +
