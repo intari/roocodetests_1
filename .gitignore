@@ -29,3 +29,4 @@ venv/
 ehthumbs.db
 Thumbs.db
 .env
+test_venv/*
