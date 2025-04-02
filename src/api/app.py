@@ -86,15 +86,19 @@ def search():
             file_path = hit['_source']['file_path']
             content = hit['_source']['content']
             
-            # Highlight snippet (simple version)
+            # Highlight snippet with Unicode support
             snippet_char_limit = int(os.environ.get("SNIPPET_CHAR_LIMIT", 100))
-            index = content.lower().find(query.lower())
-            if index != -1:
-                start = max(0, index - snippet_char_limit)
-                end = min(len(content), index + snippet_char_limit + len(query))
-                snippet = content[start:end]
-            else:
-                snippet = "No snippet found"
+            try:
+                # Case-insensitive Unicode search
+                index = content.casefold().find(query.casefold())
+                if index != -1:
+                    start = max(0, index - snippet_char_limit)
+                    end = min(len(content), index + snippet_char_limit + len(query))
+                    snippet = content[start:end]
+                else:
+                    snippet = "No snippet found"
+            except Exception as e:
+                snippet = f"Error generating snippet: {str(e)}"
                 
             # Get base URL from environment
             base_url = os.environ.get("BASE_URL", "http://localhost:8000")
@@ -200,7 +204,7 @@ def get_file_html(file_path):
     """Serve the HTML version of the file"""
     # Ensure the file path is within the /books directory
     books_dir = "/books"
-    # TODO: remove this logic from regular erv
+    # TODO: remove this logic from regular version
     
     # Decode URL-encoded path and normalize
     decoded_path = unquote(file_path)
@@ -260,6 +264,7 @@ def get_file_html(file_path):
 def get_file(file_path):
     """Serve the file with proper headers"""
     # Ensure the file path is within the /books directory
+    # TODO:does this function EVER used? Should it be? Should it be convertedto use get_file_html logic for format=html?
     books_dir = "/books"
     
     # Decode URL-encoded path and normalize
@@ -443,16 +448,33 @@ def reset_index():
         if es.indices.exists(index=INDEX_NAME):
             es.indices.delete(index=INDEX_NAME)
         
-        # Create new index with mapping
+        # Create new index with mapping and Cyrillic analyzer
         es.indices.create(index=INDEX_NAME, body={
             "settings": {
                 "number_of_shards": 1,
-                "number_of_replicas": 0
+                "number_of_replicas": 0,
+                "analysis": {
+                    "analyzer": {
+                        "cyrillic_analyzer": {
+                            "type": "custom",
+                            "tokenizer": "standard",
+                            "filter": [
+                                "lowercase",
+                                "russian_morphology",
+                                "english_morphology"
+                            ]
+                        }
+                    }
+                }
             },
             "mappings": {
                 "properties": {
                     "file_path": {"type": "keyword"},
-                    "content": {"type": "text"}
+                    "content": {
+                        "type": "text",
+                        "analyzer": "cyrillic_analyzer",
+                        "search_analyzer": "cyrillic_analyzer"
+                    }
                 }
             }
         })
