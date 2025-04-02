@@ -9,10 +9,7 @@ import PyPDF2
 import time
 import logging
 import multiprocessing
-import sys
-from pathlib import Path
-sys.path.append(str(Path(__file__).parent.parent))
-from index import index_files, get_progress
+from src.core.index import index_files, get_progress
 from io import StringIO
 import sys
 
