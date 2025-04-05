@@ -1,12 +1,12 @@
 {
   "name": "search_books",
-  "description": "Search for books by content using the book search API.",
+  "description": "Search the books, highlights and notes for relevant information. When the user ask you something you don't know, you can use this function to search for relevant information in the local archive of boooks, highlights and notes. Don't use questions as search query, use keywords and phrases instead. The search query should contains the keywords or topics related to the conversation.",
   "parameters": {
     "type": "object",
     "properties": {
       "query": {
         "type": "string",
-        "description": "The search query to find matching book content"
+        "description": "Search the books, highlights and notes for relevant information. When the user ask you something you don't know, you can use this function to search for relevant information in the local archive of boooks, highlights and notes. Don't use questions as search query, use keywords and phrases instead. The search query should contains the keywords or topics related to the conversation."
       }
     },
     "required": [
