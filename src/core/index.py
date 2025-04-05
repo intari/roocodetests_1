@@ -199,7 +199,7 @@ def extract_text_from_epub(epub_path):
             book = epub.read_epub(epub_path)
         except Exception as e:
             with progress_lock:
-                indexing_progress['errors'].append(f"EPUB structure error in {epub_path}: {str(e)}")
+                indexing_progress['errors'].append(f"Failed to load EPUB: {epub_path}: Error:{str(e)}")
             return text
 
         # Collect all items first to handle generator issues
